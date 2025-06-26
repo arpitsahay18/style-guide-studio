@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BrandGuide } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useBrandGuide } from '@/context/BrandGuideContext';
-import { uploadImageToStorage } from '@/utils/firebaseStorage';
+import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
 
 interface ShareableLink {
   id: string;
@@ -36,7 +36,7 @@ const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: 
   let logoUrl = brandGuide.logos.original;
   if (logoUrl && logoUrl.startsWith('data:image/')) {
     try {
-      logoUrl = await uploadImageToStorage(logoUrl, userId, 'shared-logo');
+      logoUrl = await uploadBase64ToStorage(logoUrl, userId, 'shared-logo');
     } catch (error) {
       console.error('Error uploading logo to storage:', error);
       // Keep original base64 as fallback
