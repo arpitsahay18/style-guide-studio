@@ -1,11 +1,11 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandGuide } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useBrandGuide } from '@/context/BrandGuideContext';
+import { uploadImageToStorage } from '@/utils/firebaseStorage';
 
 interface ShareableLink {
   id: string;
@@ -31,7 +31,18 @@ interface OptimizedBrandGuide {
   };
 }
 
-const optimizeBrandGuideForSharing = (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string): OptimizedBrandGuide => {
+const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string, userId: string): Promise<OptimizedBrandGuide> => {
+  // Handle logo upload to Firebase Storage if it's base64
+  let logoUrl = brandGuide.logos.original;
+  if (logoUrl && logoUrl.startsWith('data:image/')) {
+    try {
+      logoUrl = await uploadImageToStorage(logoUrl, userId, 'shared-logo');
+    } catch (error) {
+      console.error('Error uploading logo to storage:', error);
+      // Keep original base64 as fallback
+    }
+  }
+
   // Create an optimized version with only essential data
   const optimized: OptimizedBrandGuide = {
     name: brandGuide.name,
@@ -49,7 +60,7 @@ const optimizeBrandGuideForSharing = (brandGuide: BrandGuide, colorNames: any, t
     },
     typography: brandGuide.typography,
     logos: {
-      original: brandGuide.logos.original,
+      original: logoUrl,
       square: brandGuide.logos.square.map(logo => ({
         src: logo.src,
         background: logo.background,
@@ -161,12 +172,13 @@ export const useShareableLinks = () => {
       expiresAt.setHours(expiresAt.getHours() + 72);
 
       // Optimize brand guide data
-      const optimizedBrandGuide = optimizeBrandGuideForSharing(
+      const optimizedBrandGuide = await optimizeBrandGuideForSharing(
         brandGuide, 
         colorNames, 
         typographyNames, 
         typographyVisibility, 
-        previewText
+        previewText,
+        user.uid
       );
 
       const linkData = {
@@ -246,14 +258,6 @@ export const useShareableLinks = () => {
       });
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchLinks();
-    } else {
-      setLinks([]);
-    }
-  }, [user]);
 
   return {
     links,

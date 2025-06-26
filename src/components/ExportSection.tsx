@@ -10,12 +10,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Share } from 'lucide-react';
+import { Eye, Share, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BrandGuideWarning } from './BrandGuideWarning';
 import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { useAuth } from '@/hooks/useAuth';
 import { ShareableLinkPopup } from './ShareableLinkPopup';
+import { GeneratedLinksDialog } from './GeneratedLinksDialog';
 
 export function ExportSection() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export function ExportSection() {
   const { user } = useAuth();
   const [generatedLink, setGeneratedLink] = useState<string>('');
   const [showLinkPopup, setShowLinkPopup] = useState(false);
+  const [showLinksDialog, setShowLinksDialog] = useState(false);
   
   const isGuideComplete = 
     currentGuide.colors.primary.length > 0 && 
@@ -108,10 +110,10 @@ export function ExportSection() {
             }
           </p>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex gap-2">
           <Button 
             onClick={handleGenerateShareableLink}
-            className="w-full sm:w-auto"
+            className="flex-1 sm:flex-initial"
             disabled={!user || !isGuideComplete || linksLoading}
           >
             <Share className="mr-2 h-4 w-4" />
@@ -124,6 +126,17 @@ export function ExportSection() {
                   : "Generate Shareable Link"
             }
           </Button>
+          
+          {user && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowLinksDialog(true)}
+              disabled={linksLoading}
+            >
+              <List className="mr-2 h-4 w-4" />
+              Manage Links
+            </Button>
+          )}
         </CardFooter>
       </Card>
 
@@ -132,6 +145,11 @@ export function ExportSection() {
         onOpenChange={setShowLinkPopup}
         link={generatedLink}
         onCopy={handleCopyLink}
+      />
+
+      <GeneratedLinksDialog
+        open={showLinksDialog}
+        onOpenChange={setShowLinksDialog}
       />
     </div>
   );

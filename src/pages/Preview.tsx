@@ -78,7 +78,7 @@ const Preview = () => {
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
-      pdf.text('Brand Guide', pageWidth / 2, 170, { align: 'center' });
+      pdf.text('Brand Guidelines', pageWidth / 2, 170, { align: 'center' });
 
       // Capture content sections with better page break handling
       const sections = contentRef.current.querySelectorAll('.pdf-section');
@@ -166,21 +166,26 @@ const Preview = () => {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{currentGuide.name}</h1>
-                <p className="text-gray-600">Brand Guide Preview</p>
+                <p className="text-gray-600">Brand Guidelines</p>
               </div>
             </div>
-            <Button onClick={handleExportPDF} className="flex items-center gap-2">
-              <FileDown className="h-4 w-4" />
-              Export PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportPDF} className="flex items-center gap-2">
+                <FileDown className="h-4 w-4" />
+                Save as PDF
+              </Button>
+              <Button className="flex items-center gap-2">
+                Share Link
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Brand Guide Content */}
-        <div ref={contentRef} className="container mx-auto px-4 py-8 space-y-12">
+        <div ref={contentRef} className="container mx-auto px-4 py-8 space-y-16">
           
           {/* Brand Header */}
-          <div className="pdf-section text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg pdf-no-break">
+          <div className="pdf-section text-center py-12 pdf-no-break">
             {currentGuide.logos?.original && (
               <div className="mb-8">
                 <img 
@@ -194,91 +199,49 @@ const Preview = () => {
             <p className="text-xl text-gray-600">Brand Guidelines</p>
           </div>
 
-          {/* Color Palette */}
-          {(currentGuide.colors?.primary?.length > 0 || currentGuide.colors?.secondary?.length > 0) && (
-            <section className="pdf-section pdf-no-break">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">Color Palette</h2>
-              
-              {currentGuide.colors.primary?.length > 0 && (
-                <div className="mb-12 pdf-no-break">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-6">Primary Colors</h3>
-                  <div className="pdf-color-grid">
-                    {currentGuide.colors.primary.map((color, index) => (
-                      <div key={index} className="text-center pdf-no-break">
-                        <div 
-                          className="w-full h-32 rounded-lg border border-gray-200 mb-3"
-                          style={{ backgroundColor: color.hex }}
-                        ></div>
-                        <p className="font-medium text-gray-900 mb-1">
-                          {getColorDisplayName(index, 'primary')}
-                        </p>
-                        <p className="text-sm text-gray-600 font-mono">{color.hex}</p>
-                        <p className="text-xs text-gray-500">{color.rgb}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {currentGuide.colors.secondary?.length > 0 && (
-                <div className="pdf-no-break">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-6">Secondary Colors</h3>
-                  <div className="pdf-color-grid">
-                    {currentGuide.colors.secondary.map((color, index) => (
-                      <div key={index} className="text-center pdf-no-break">
-                        <div 
-                          className="w-full h-32 rounded-lg border border-gray-200 mb-3"
-                          style={{ backgroundColor: color.hex }}
-                        ></div>
-                        <p className="font-medium text-gray-900 mb-1">
-                          {getColorDisplayName(index, 'secondary')}
-                        </p>
-                        <p className="text-sm text-gray-600 font-mono">{color.hex}</p>
-                        <p className="text-xs text-gray-500">{color.rgb}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Typography */}
+          {/* Typography Section */}
           {Object.keys(currentGuide.typography || {}).length > 0 && (
             <section className="pdf-section">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Typography</h2>
               
               {Object.entries(currentGuide.typography).map(([category, styles]) => (
                 <div key={category} className="mb-12 pdf-no-break">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-6 capitalize">{category}</h3>
-                  <div className="space-y-8">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6 capitalize">{category} {category === 'display' ? 'Typography' : category === 'heading' ? '' : 'Text'}</h3>
+                  <div className="space-y-6">
                     {typographyVisibility[category as keyof typeof typographyVisibility]?.map((styleKey) => {
                       const style = styles[styleKey as keyof typeof styles];
                       if (!style) return null;
                       
                       return (
-                        <div key={styleKey} className="pdf-typography-sample border border-gray-200 rounded-lg p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <h4 className="text-lg font-medium text-gray-900">
-                              {getTypographyDisplayName(category, styleKey)}
-                            </h4>
-                            <div className="text-right text-sm text-gray-600">
-                              <p>{style.fontSize}</p>
-                              <p>Weight: {style.fontWeight}</p>
+                        <div key={styleKey} className="pdf-typography-sample">
+                          <div className="flex items-start gap-8">
+                            <div className="w-48 flex-shrink-0">
+                              <div className="text-left border-l-4 border-blue-500 pl-4">
+                                <h4 className="text-lg font-medium text-gray-900 mb-1">
+                                  {getTypographyDisplayName(category, styleKey)}
+                                </h4>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <p>{style.fontFamily?.replace(/['"]/g, '').split(',')[0]}</p>
+                                  <p>{style.fontSize} • {style.fontWeight}</p>
+                                  <p>{style.lineHeight} • {style.letterSpacing}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p 
+                                className="text-gray-800"
+                                style={{ 
+                                  fontFamily: style.fontFamily,
+                                  fontSize: style.fontSize,
+                                  fontWeight: style.fontWeight,
+                                  lineHeight: style.lineHeight,
+                                  letterSpacing: style.letterSpacing
+                                }}
+                              >
+                                {previewText}
+                              </p>
                             </div>
                           </div>
-                          <p 
-                            className="text-gray-800"
-                            style={{ 
-                              fontFamily: style.fontFamily,
-                              fontSize: style.fontSize,
-                              fontWeight: style.fontWeight,
-                              lineHeight: style.lineHeight,
-                              letterSpacing: style.letterSpacing
-                            }}
-                          >
-                            {previewText}
-                          </p>
                         </div>
                       );
                     })}
@@ -288,18 +251,152 @@ const Preview = () => {
             </section>
           )}
 
+          {/* Color Palette */}
+          {(currentGuide.colors?.primary?.length > 0 || currentGuide.colors?.secondary?.length > 0) && (
+            <section className="pdf-section pdf-no-break">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8">Color Palette</h2>
+              
+              {currentGuide.colors.primary?.length > 0 && (
+                <div className="mb-12 pdf-no-break">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">Primary Colors</h3>
+                  <div className="grid grid-cols-3 gap-6">
+                    {currentGuide.colors.primary.map((color, index) => (
+                      <div key={index} className="text-center pdf-no-break">
+                        <div 
+                          className="w-full h-32 rounded-lg border border-gray-200 mb-3"
+                          style={{ backgroundColor: color.hex }}
+                        ></div>
+                        <p className="font-medium text-gray-900 mb-1">
+                          {getColorDisplayName(index, 'primary')}
+                        </p>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p className="font-mono">HEX: {color.hex}</p>
+                          <p>RGB: {color.rgb}</p>
+                          <p>CMYK: {color.cmyk}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {currentGuide.colors.secondary?.length > 0 && (
+                <div className="pdf-no-break">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">Secondary Colors</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    {currentGuide.colors.secondary.map((color, index) => (
+                      <div key={index} className="text-center pdf-no-break">
+                        <div 
+                          className="w-full h-24 rounded-lg border border-gray-200 mb-3"
+                          style={{ backgroundColor: color.hex }}
+                        ></div>
+                        <p className="font-medium text-gray-900 mb-1">
+                          {getColorDisplayName(index, 'secondary')}
+                        </p>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p className="font-mono">HEX: {color.hex}</p>
+                          <p>RGB: {color.rgb}</p>
+                          <p>CMYK: {color.cmyk}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Logo Section */}
           {currentGuide.logos?.original && (
             <section className="pdf-section pdf-no-break">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Logo</h2>
-              <div className="bg-gray-50 rounded-lg p-12 text-center">
-                <img 
-                  src={currentGuide.logos.original} 
-                  alt={`${currentGuide.name} Logo`}
-                  className="h-40 mx-auto object-contain mb-6"
-                />
-                <p className="text-gray-600 text-lg">Primary Logo</p>
+              
+              <div className="mb-12">
+                <h3 className="text-xl font-semibold text-gray-800 mb-6">Primary Logo</h3>
+                <div className="bg-gray-50 rounded-lg p-12 text-center border border-gray-200">
+                  <img 
+                    src={currentGuide.logos.original} 
+                    alt={`${currentGuide.name} Logo`}
+                    className="h-32 mx-auto object-contain mb-4"
+                  />
+                </div>
               </div>
+
+              {/* Logo Variations */}
+              {(currentGuide.logos.square?.length > 0 || currentGuide.logos.rounded?.length > 0 || currentGuide.logos.circle?.length > 0) && (
+                <div className="pdf-no-break">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">Logo Variations</h3>
+                  
+                  {currentGuide.logos.square?.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Square</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {currentGuide.logos.square.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-20 h-20 mx-auto rounded border border-gray-200 flex items-center justify-center mb-2"
+                              style={{ backgroundColor: logo.background === 'transparent' ? '#f3f4f6' : logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Square logo ${index + 1}`}
+                                className="max-w-12 max-h-12 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 capitalize">{logo.background} Background</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentGuide.logos.rounded?.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Rounded</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {currentGuide.logos.rounded.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-20 h-20 mx-auto rounded-lg border border-gray-200 flex items-center justify-center mb-2"
+                              style={{ backgroundColor: logo.background === 'transparent' ? '#f3f4f6' : logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Rounded logo ${index + 1}`}
+                                className="max-w-12 max-h-12 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 capitalize">{logo.background} Background</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentGuide.logos.circle?.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Circle</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {currentGuide.logos.circle.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-20 h-20 mx-auto rounded-full border border-gray-200 flex items-center justify-center mb-2"
+                              style={{ backgroundColor: logo.background === 'transparent' ? '#f3f4f6' : logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Circle logo ${index + 1}`}
+                                className="max-w-12 max-h-12 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 capitalize">{logo.background} Background</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 
