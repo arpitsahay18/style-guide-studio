@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -32,14 +33,12 @@ import {
   Crop, 
   ZoomIn, 
   ZoomOut, 
-  Move, 
-  Download,
+  Move,
   ArrowRight
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { LogoDropzone } from './LogoDropzone';
 import { LogoCropper } from './LogoCropper';
-import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
@@ -53,6 +52,7 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
   const generateVariations = () => {
     const variations: LogoVariation[] = [];
     
+    // Auto-generated variations with 4 backgrounds
     variations.push({
       src: originalLogo,
       background: '#FFFFFF',
@@ -62,7 +62,7 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
     variations.push({
       src: originalLogo,
       background: '#000000',
-      type: 'color'
+      type: 'white'
     });
     
     variations.push({
@@ -73,8 +73,8 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
     
     variations.push({
       src: originalLogo,
-      background: '#FFFFFF',
-      type: 'black'
+      background: '#6B7280',
+      type: 'white'
     });
     
     onComplete(variations);
@@ -85,8 +85,7 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
       <div>
         <h3 className="text-lg font-medium mb-2">Create Logo Variations</h3>
         <p className="text-sm text-muted-foreground">
-          We'll create standard logo variations for different backgrounds and use cases.
-          In a real application, this would process the logo to create true single-color versions.
+          We'll create logo variations with different backgrounds: white, black, brand blue, and gray.
         </p>
       </div>
       
@@ -133,19 +132,25 @@ export function LogoSection() {
   };
   
   const handleCropComplete = async (croppedImage: string) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication required",
-        description: "Please sign in to upload logos.",
-      });
-      return;
-    }
-
     setUploading(true);
     try {
-      // Upload the cropped image to Firebase Storage
-      const logoUrl = await uploadBase64ToStorage(croppedImage, user.uid, 'logo.png');
+      let logoUrl = croppedImage;
+      
+      // Dual-mode handling: Firebase Storage for authenticated users, local storage for guests
+      if (user) {
+        // Upload to Firebase Storage for authenticated users
+        logoUrl = await uploadBase64ToStorage(croppedImage, user.uid, 'logo.png');
+        toast({
+          title: "Logo uploaded to cloud",
+          description: "Your logo has been saved to Firebase Storage.",
+        });
+      } else {
+        // Store locally for guest users
+        toast({
+          title: "Logo saved locally",
+          description: "Your logo is saved in this session. Sign in to save permanently.",
+        });
+      }
       
       const updatedLogos: LogoSet = {
         ...currentGuide.logos,
@@ -157,16 +162,12 @@ export function LogoSection() {
       setShowCropper(false);
       setShowVariationCreator(true);
       
-      toast({
-        title: "Logo uploaded successfully",
-        description: "Your logo has been saved to the cloud.",
-      });
     } catch (error) {
-      console.error('Error uploading logo:', error);
+      console.error('Error handling logo:', error);
       toast({
         variant: "destructive",
-        title: "Upload failed",
-        description: "There was an error uploading your logo. Please try again.",
+        title: "Logo upload failed",
+        description: "There was an error saving your logo. Please try again.",
       });
     } finally {
       setUploading(false);
@@ -201,122 +202,6 @@ export function LogoSection() {
     setCroppedImage('');
   };
   
-  const handleDownloadLogoPack = async () => {
-    if (!currentGuide.logos.original) {
-      toast({
-        variant: "destructive",
-        title: "No logo available",
-        description: "Please upload a logo first.",
-      });
-      return;
-    }
-    
-    toast({
-      title: "Generating logo pack",
-      description: "Creating PDF with all variations...",
-    });
-    
-    try {
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-      
-      doc.setFontSize(24);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${currentGuide.name || 'Brand'} Logo Pack`, 20, 30);
-      
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "normal");
-      doc.text('Original Logo', 20, 50);
-      
-      if (currentGuide.logos.original) {
-        doc.addImage(currentGuide.logos.original, 'PNG', 20, 60, 60, 60);
-      }
-      
-      doc.text('Logo Variations', 20, 140);
-      
-      let yPosition = 150;
-      const logoSets = [
-        { title: 'Square', logos: currentGuide.logos.square },
-        { title: 'Rounded', logos: currentGuide.logos.rounded },
-        { title: 'Circle', logos: currentGuide.logos.circle }
-      ];
-      
-      for (const set of logoSets) {
-        if (set.logos.length > 0) {
-          doc.setFontSize(14);
-          doc.setFont("helvetica", "bold");
-          doc.text(set.title, 20, yPosition);
-          yPosition += 10;
-          
-          const logosToShow = set.logos.slice(0, 4);
-          let xPosition = 20;
-          
-          for (let i = 0; i < logosToShow.length; i++) {
-            const logo = logosToShow[i];
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 100;
-            canvas.height = 100;
-            const ctx = canvas.getContext('2d');
-            
-            if (ctx) {
-              ctx.fillStyle = logo.background;
-              ctx.fillRect(0, 0, 100, 100);
-              
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              
-              await new Promise<void>((resolve) => {
-                img.onload = () => {
-                  const maxDim = 75;
-                  const scale = Math.min(maxDim / img.width, maxDim / img.height);
-                  const width = img.width * scale;
-                  const height = img.height * scale;
-                  const x = (100 - width) / 2;
-                  const y = (100 - height) / 2;
-                  
-                  ctx.drawImage(img, x, y, width, height);
-                  resolve();
-                };
-                img.src = logo.src;
-              });
-              
-              const logoDataUrl = canvas.toDataURL('image/png');
-              doc.addImage(logoDataUrl, 'PNG', xPosition, yPosition, 30, 30);
-            }
-            
-            xPosition += 40;
-          }
-          
-          yPosition += 40;
-        }
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 280);
-      
-      const filename = `${(currentGuide.name || 'Brand').replace(/\s+/g, '_')}_logo_pack.pdf`;
-      doc.save(filename);
-      
-      toast({
-        title: "Logo pack downloaded",
-        description: "Your complete logo pack has been saved as PDF.",
-      });
-      
-    } catch (error) {
-      console.error("Error generating logo pack:", error);
-      toast({
-        variant: "destructive",
-        title: "Export failed",
-        description: "There was an error generating your logo pack.",
-      });
-    }
-  };
-  
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8 animate-fade-in">
       <Card className="mb-8">
@@ -346,7 +231,9 @@ export function LogoSection() {
           {uploading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Uploading logo to cloud storage...</p>
+              <p className="text-gray-600">
+                {user ? 'Uploading logo to cloud storage...' : 'Processing logo...'}
+              </p>
             </div>
           )}
           
@@ -390,11 +277,6 @@ export function LogoSection() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  
-                  <Button size="sm" onClick={handleDownloadLogoPack}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Logo Pack
-                  </Button>
                 </div>
               </div>
               

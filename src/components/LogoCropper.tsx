@@ -10,6 +10,7 @@ interface LogoCropperProps {
   imageUrl: string;
   onCrop: (croppedImage: string) => void;
   onCancel: () => void;
+  disabled?: boolean;
 }
 
 function centerAspectCrop(
@@ -32,20 +33,19 @@ function centerAspectCrop(
   );
 }
 
-export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
+export function LogoCropper({ imageUrl, onCrop, onCancel, disabled = false }: LogoCropperProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [scale, setScale] = useState(1);
   const imgRef = useRef<HTMLImageElement>(null);
   
-  // This creates a preview canvas when crop completes
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, 1)); // Square aspect ratio
+    setCrop(centerAspectCrop(width, height, 1));
   }, []);
 
   const handleComplete = useCallback(() => {
-    if (completedCrop && imgRef.current) {
+    if (completedCrop && imgRef.current && !disabled) {
       const image = imgRef.current;
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -54,15 +54,12 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
         throw new Error('No 2d context');
       }
 
-      // Calculate the size of the cropped area at the original scale
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
-      // Set the canvas size to the cropped area dimensions
       canvas.width = completedCrop.width * scaleX;
       canvas.height = completedCrop.height * scaleY;
 
-      // Draw only the cropped area onto the canvas
       ctx.drawImage(
         image,
         completedCrop.x * scaleX,
@@ -75,11 +72,10 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
         canvas.height
       );
 
-      // Convert to base64
       const base64Image = canvas.toDataURL('image/png');
       onCrop(base64Image);
     }
-  }, [completedCrop, onCrop]);
+  }, [completedCrop, onCrop, disabled]);
 
   return (
     <div className="space-y-6">
@@ -97,6 +93,7 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
           onComplete={(c) => setCompletedCrop(c)}
           aspect={1}
           className="max-h-[500px] mx-auto border rounded-lg overflow-hidden"
+          disabled={disabled}
         >
           <img
             ref={imgRef}
@@ -118,6 +115,7 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
                 variant="outline" 
                 size="sm" 
                 onClick={() => setScale((prev) => Math.max(0.5, prev - 0.1))}
+                disabled={disabled}
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
@@ -125,6 +123,7 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
                 variant="outline" 
                 size="sm" 
                 onClick={() => setScale((prev) => Math.min(3, prev + 0.1))}
+                disabled={disabled}
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
@@ -137,16 +136,17 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
             max={300}
             step={10}
             className="my-4"
+            disabled={disabled}
           />
         </div>
 
         <div className="flex justify-end gap-4">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={disabled}>
             Cancel
           </Button>
-          <Button onClick={handleComplete}>
+          <Button onClick={handleComplete} disabled={disabled}>
             <CropIcon className="h-4 w-4 mr-2" />
-            Crop Logo
+            {disabled ? "Processing..." : "Crop Logo"}
           </Button>
         </div>
       </div>
